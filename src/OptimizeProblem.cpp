@@ -39,6 +39,13 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
   // This function can be used to completely transform any part of the data structures.
   // Right now it does nothing, so compiling with a check for unused variables results in complaints
 
+  SparseMatrix * curLevelMatrix = &A;
+	while (curLevelMatrix != NULL) {
+		OptimizeProblem_test1(*curLevelMatrix);
+    curLevelMatrix = curLevelMatrix->Ac; // Make the just-constructed coarse grid the next level
+  }
+
+
 #if defined(HPCG_USE_MULTICOLORING)
   const local_int_t nrow = A.localNumberOfRows;
   std::vector<local_int_t> colors(nrow, nrow); // value `nrow' means `uninitialized'; initialized colors go from 0 to nrow-1
@@ -99,9 +106,51 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
   return 0;
 }
 
+int OptimizeProblem_test1(SparseMatrix &A) {
+  const local_int_t nrow = A.localNumberOfRows;
+	double *xv_tmp = new double[nrow];
+	int *i_before_diagonal = new int[nrow];
+	int *i_after_diagonal = new int[nrow];
+
+#ifndef HPCG_NO_OPENMP
+	#pragma omp parallel for
+#endif
+	for (local_int_t i=0; i < nrow; i++) {
+      const local_int_t * const currentColIndices = A.mtxIndL[i];
+      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+
+			int count_before=0;
+			int count_after=0;
+      for (local_int_t j=0; j< currentNumberOfNonzeros; j++) {
+				local_int_t jj = currentColIndices[j];
+				if (jj<i)
+					count_before++;
+				if (jj>i)
+					count_after++;
+			}
+			i_before_diagonal[i] = count_before;
+			i_after_diagonal[i] = count_after;
+	}
+	void * optimizationData = malloc(sizeof(void *)*3);
+	((double **)optimizationData)[0] = xv_tmp;
+	((int **)optimizationData)[1] = i_before_diagonal;
+	((int **)optimizationData)[2] = i_after_diagonal;
+  A.optimizationData = optimizationData;
+
+	return 0;
+}
+
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+	double total = 0.0;
+  const SparseMatrix * curLevelMatrix = &A;
+	while (curLevelMatrix != NULL) {
+  const local_int_t nrow = A.localNumberOfRows;
+		double this_level = A.localNumberOfRows * (2*sizeof(int)+sizeof(double));
+		total += this_level;
+    curLevelMatrix = curLevelMatrix->Ac;
+  }
+  return total;
 
 }

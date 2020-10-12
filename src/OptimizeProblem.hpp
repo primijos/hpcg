@@ -27,4 +27,6 @@ int OptimizeProblem(SparseMatrix & A, CGData & data,  Vector & b, Vector & x, Ve
 
 double OptimizeProblemMemoryUse(const SparseMatrix & A);
 
+int OptimizeProblem_test1(SparseMatrix & A);
+
 #endif  // OPTIMIZEPROBLEM_HPP
