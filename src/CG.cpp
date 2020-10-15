@@ -98,6 +98,9 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
   // Start iterations
 
   for (int k=1; k<=max_iter && normr/normr0 > tolerance; k++ ) {
+#ifdef HPCG_DETAILED_DEBUG
+		double t99 = mytimer();
+#endif
     TICK();
     if (doPreconditioning)
       ComputeMG(A, r, z); // Apply preconditioner
@@ -127,6 +130,10 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
       HPCG_fout << "Iteration = "<< k << "   Scaled Residual = "<< normr/normr0 << std::endl;
 #endif
     niters = k;
+#ifdef HPCG_DETAILED_DEBUG
+		t99 = mytimer() - t99;
+		printf("\tniters=%d time=%g residual=%10.20f tolerance=%10.20f\n",niters,t99,normr/normr0,tolerance);
+#endif
   }
 
   // Store times

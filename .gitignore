@@ -5,3 +5,7 @@ bin/HPCG-Benchmark_3*.txt
 bin/xhpcg
 bin/hpcg20*.txt
 .DS_Store
+bin/trace*txt
+bin/stats*txt
+bin/info*txt
+bin/result*txt
