@@ -221,6 +221,9 @@ int main(int argc, char * argv[]) {
     ierr = CG_ref( A, data, b, x, refMaxIters, tolerance, niters, normr, normr0, &ref_times[0], true);
     if (ierr) ++err_count; // count the number of errors in CG
     totalNiters_ref += niters;
+#ifdef HPCG_DETAILED_DEBUG
+		printf("Iter  %d, niters=%d residual=%g for refernce CG\n",i,niters,normr/normr0);
+#endif
   }
   if (rank == 0 && err_count) HPCG_fout << err_count << " error(s) in call(s) to reference CG." << endl;
   double refTolerance = normr / normr0;
@@ -248,6 +251,9 @@ int main(int argc, char * argv[]) {
 #endif
   TestCGData testcg_data;
   testcg_data.count_pass = testcg_data.count_fail = 0;
+#ifdef HPCG_DETAILED_DEBUG
+	printf("Testing CG\n");
+#endif
   TestCG(A, data, b, x, testcg_data);
 
   TestSymmetryData testsymmetry_data;
@@ -279,9 +285,15 @@ int main(int argc, char * argv[]) {
 
   // Compute the residual reduction and residual count for the user ordering and optimized kernels.
   for (int i=0; i< numberOfCalls; ++i) {
+#ifdef HPCG_DETAILED_DEBUG
+		printf("Optimized CG setup, iter=%d tolerance=%g\n",i,refTolerance);
+#endif
     ZeroVector(x); // start x at all zeros
     double last_cummulative_time = opt_times[0];
     ierr = CG( A, data, b, x, optMaxIters, refTolerance, niters, normr, normr0, &opt_times[0], true);
+#ifdef HPCG_DETAILED_DEBUG
+		printf("Iter  %d, niters=%d residual=%g for optimized CG\n",i,niters,normr/normr0);
+#endif
     if (ierr) ++err_count; // count the number of errors in CG
     if (normr / normr0 > refTolerance) ++tolerance_failures; // the number of failures to reduce residual
 
