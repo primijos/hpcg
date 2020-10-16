@@ -118,7 +118,8 @@ HPCG_DEFS     = $(HPCG_OPTS) $(HPCG_INCLUDES)
 # ----------------------------------------------------------------------
 #
 CXX          = fpgacxx
-CXXFLAGS     = $(HPCG_DEFS) --Wn,-pg -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss
+CXXFLAGS     = $(HPCG_DEFS) --Wl,-pg --Wn,-pg -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss
+
 #
 LINKER       = $(CXX)
 LINKFLAGS    = $(CXXFLAGS)
