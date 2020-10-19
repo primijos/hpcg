@@ -18,6 +18,7 @@
  HPCG routine
  */
 
+#include <stdio.h>
 #include "OptimizeProblem.hpp"
 /*!
   Optimizes the data structures used for CG iteration to increase the
@@ -38,6 +39,13 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 
   // This function can be used to completely transform any part of the data structures.
   // Right now it does nothing, so compiling with a check for unused variables results in complaints
+
+  SparseMatrix * curLevelMatrix = &A;
+	while (curLevelMatrix != NULL) {
+		OptimizeProblem_naive(*curLevelMatrix);
+    curLevelMatrix = curLevelMatrix->Ac; // Make the just-constructed coarse grid the next level
+  }
+
 
 #if defined(HPCG_USE_MULTICOLORING)
   const local_int_t nrow = A.localNumberOfRows;
@@ -99,9 +107,48 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
   return 0;
 }
 
+int OptimizeProblem_naive(SparseMatrix &A) {
+  const local_int_t nrow = A.localNumberOfRows;
+	int *j_before_diagonal = new int[nrow];
+	int *j_after_diagonal = new int[nrow];
+
+#ifndef HPCG_NO_OPENMP
+	#pragma omp for
+#endif
+	for (local_int_t i=0; i < nrow; i++) {
+    const local_int_t * const currentColIndices = A.mtxIndL[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+		int last_j = -1;
+
+    for (local_int_t j=0; j< currentNumberOfNonzeros; j++) {
+			local_int_t jj = currentColIndices[j];
+			if (jj==i) {
+					j_before_diagonal[i] = last_j;
+					j_after_diagonal[i] = j+1;
+					break;
+			}
+			last_j = j;
+		}
+	}
+	void * optimizationData = malloc(sizeof(void *)*2);
+	((int **)optimizationData)[0] = j_before_diagonal;
+	((int **)optimizationData)[1] = j_after_diagonal;
+  A.optimizationData = optimizationData;
+
+	return 0;
+}
+
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+	double total = 0.0;
+  const SparseMatrix * curLevelMatrix = &A;
+	while (curLevelMatrix != NULL) {
+  const local_int_t nrow = A.localNumberOfRows;
+		double this_level = A.localNumberOfRows * (2*sizeof(int));
+		total += this_level;
+    curLevelMatrix = curLevelMatrix->Ac;
+  }
+  return total;
 
 }

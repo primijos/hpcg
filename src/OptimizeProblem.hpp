@@ -26,5 +26,6 @@ int OptimizeProblem(SparseMatrix & A, CGData & data,  Vector & b, Vector & x, Ve
 // This value will be used to report Gbytes used in ReportResults (the value returned will be divided by 1000000000.0).
 
 double OptimizeProblemMemoryUse(const SparseMatrix & A);
+int OptimizeProblem_naive(SparseMatrix &A);
 
 #endif  // OPTIMIZEPROBLEM_HPP
