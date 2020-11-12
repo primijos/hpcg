@@ -1,0 +1,164 @@
+#HEADER
+#  -- High Performance Conjugate Gradient Benchmark (HPCG)
+#     HPCG - 3.1 - March 28, 2019
+
+#     Michael A. Heroux
+#     Scalable Algorithms Group, Computing Research Division
+#     Sandia National Laboratories, Albuquerque, NM
+#
+#     Piotr Luszczek
+#     Jack Dongarra
+#     University of Tennessee, Knoxville
+#     Innovative Computing Laboratory
+#
+#     (C) Copyright 2013-2019 All Rights Reserved
+#
+#
+#  -- Copyright notice and Licensing terms:
+#
+#  Redistribution  and  use in  source and binary forms, with or without
+#  modification, are  permitted provided  that the following  conditions
+#  are met:
+#
+#  1. Redistributions  of  source  code  must retain the above copyright
+#  notice, this list of conditions and the following disclaimer.
+#
+#  2. Redistributions in binary form must reproduce  the above copyright
+#  notice, this list of conditions,  and the following disclaimer in the
+#  documentation and/or other materials provided with the distribution.
+#
+#  3. All  advertising  materials  mentioning  features  or  use of this
+#  software must display the following acknowledgement:
+#  This  product  includes  software  developed  at Sandia National
+#  Laboratories, Albuquerque, NM and the  University  of
+#  Tennessee, Knoxville, Innovative Computing Laboratory.
+#
+#  4. The name of the  University,  the name of the  Laboratory,  or the
+#  names  of  its  contributors  may  not  be used to endorse or promote
+#  products  derived   from   this  software  without  specific  written
+#  permission.
+#
+#  -- Disclaimer:
+#
+#  THIS  SOFTWARE  IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+#  ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,  INCLUDING,  BUT NOT
+#  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+#  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY
+#  OR  CONTRIBUTORS  BE  LIABLE FOR ANY  DIRECT,  INDIRECT,  INCIDENTAL,
+#  SPECIAL,  EXEMPLARY,  OR  CONSEQUENTIAL DAMAGES  (INCLUDING,  BUT NOT
+#  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED AND ON ANY
+#  THEORY OF LIABILITY, WHETHER IN CONTRACT,  STRICT LIABILITY,  OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+#  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ######################################################################
+#@HEADER
+# ----------------------------------------------------------------------
+# - shell --------------------------------------------------------------
+# ----------------------------------------------------------------------
+#
+SHELL        = /bin/sh
+#
+CD           = cd
+CP           = cp
+LN_S         = ln -s -f
+MKDIR        = mkdir -p
+RM           = /bin/rm -f
+TOUCH        = touch
+#
+# ----------------------------------------------------------------------
+# - HPCG Directory Structure / HPCG library ------------------------------
+# ----------------------------------------------------------------------
+#
+TOPdir       = .
+SRCdir       = $(TOPdir)/src
+INCdir       = $(TOPdir)/src
+BINdir       = $(TOPdir)/bin
+#
+# ----------------------------------------------------------------------
+# - Message Passing library (MPI) --------------------------------------
+# ----------------------------------------------------------------------
+# MPinc tells the  C  compiler where to find the Message Passing library
+# header files,  MPlib  is defined  to be the name of  the library to be
+# used. The variable MPdir is only used for defining MPinc and MPlib.
+#
+MPdir        =
+MPinc        =
+MPlib        =
+#
+#
+# ----------------------------------------------------------------------
+# - HPCG includes / libraries / specifics -------------------------------
+# ----------------------------------------------------------------------
+#
+HPCG_INCLUDES = -I$(INCdir) -I$(INCdir)/$(arch) $(MPinc)
+HPCG_LIBS     =
+#
+# - Compile time options -----------------------------------------------
+#
+# -DHPCG_NO_MPI	        Define to disable MPI
+# -DHPCG_NO_OPENMP	Define to disable OPENMP
+# -DHPCG_CONTIGUOUS_ARRAYS Define to have sparse matrix arrays long and contiguous
+# -DHPCG_DEBUG       	Define to enable debugging output
+# -DHPCG_DETAILED_DEBUG Define to enable very detailed debugging output
+#
+# By default HPCG will:
+#    *) Build with MPI enabled.
+#    *) Build with OpenMP enabled.
+#    *) Not generate debugging output.
+#
+#HPCG_OPTS     = -DHPCG_NO_MPI
+HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP
+#HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG -DHPCG_DETAILED_DEBUG
+#HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG
+#
+# ----------------------------------------------------------------------
+#
+HPCG_DEFS     = $(HPCG_OPTS) $(HPCG_INCLUDES)
+#
+# ----------------------------------------------------------------------
+# - Compilers / linkers - Optimization flags ---------------------------
+# ----------------------------------------------------------------------
+#
+FPGA_HWRUNTIME         ?= som
+FPGA_CLOCK             ?= 250
+#FPGA_MEMORY_PORT_WIDTH ?= 128
+BOARD									 ?= zedboard
+
+CROSS_COMPILE ?= arm-linux-gnueabihf-
+CXX          = $(CROSS_COMPILE)fpgacxx
+#CXXFLAGS     = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
+CXXFLAGS     = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\"
+
+bitstream: CXXFLAGS = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss --bitstream-generation -DRUNTIME_MODE=\"perf\"
+
+#
+LINKER       = $(CXX)
+LINKFLAGS    = $(CXXFLAGS)
+
+#bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance" --variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
+#
+#bitstream-p: bin/xhpcg
+#$(CXX) $(CXXFLGAS) -DRUNTIME_MODE=\"perf\" $^ -o $(PROGRAM_)-p $(LINKFLAGS) \
+#--bitstream-generation $(LINKFLAGS) \
+#--variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
+#
+bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance"
+
+#
+ARCHIVER     = ar
+ARFLAGS      = r
+RANLIB       = echo
+#
+# ----------------------------------------------------------------------
+#
+
+HPCG_C_DEPS := $(HPCG_DEPS:.o=.cpp)
+
+hpcg_ait/hpcg.bin: src/main.o $(HPCG_DEPS)
+	$(CXX) -DRUNTIME_MODE=\"perf\" $^ -o bin/xhpcg \
+	--bitstream-generation $(LINKFLAGS)
+
+.PHONY: bitstream
+
+bitstream: hpcg_ait/hpcg.bin

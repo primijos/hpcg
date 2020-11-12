@@ -39,10 +39,33 @@
 
   @see ComputeWAXPBY_ref
 */
+
+#include "defs.fpga.h"
+#pragma omp target device(fpga) num_instances(1) \
+	 copy_in([n]xv,[n]yv) copy_inout([n]wv)
+#pragma omp task inout([n]wv) in([n]xv,[n]yv)
+void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, double *yv, double *wv) {
+  if (alpha==1.0) {
+    for (local_int_t i=0; i<n; i++) wv[i] = xv[i] + beta * yv[i];
+  } else if (beta==1.0) {
+    for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + yv[i];
+  } else  {
+    for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + beta * yv[i];
+  }
+}
+
 int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
     const double beta, const Vector & y, Vector & w, bool & isOptimized) {
 
-  // This line and the next two lines should be removed and your version of ComputeWAXPBY should be used.
-  isOptimized = false;
-  return ComputeWAXPBY_ref(n, alpha, x, beta, y, w);
+  assert(x.localLength>=n); // Test vector lengths
+  assert(y.localLength>=n);
+
+  double * xv = x.values;
+  double * yv = y.values;
+  double * wv = w.values;
+
+	compute_waxpby_fpga(n,alpha,xv,beta,yv,wv);
+#pragma omp taskwait
+
+  return 0;
 }
