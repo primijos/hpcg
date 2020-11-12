@@ -22,7 +22,7 @@ bin/xhpcg: src/main.o $(HPCG_DEPS)
 	$(LINKER) $(LINKFLAGS) src/main.o $(HPCG_DEPS) -o bin/xhpcg $(HPCG_LIBS)
 
 clean:
-	rm -f $(HPCG_DEPS) bin/xhpcg src/main.o
+	rm -f $(HPCG_DEPS) bin/xhpcg src/main.o *:*:*hls_automatic_mcxx.cpp
 
 .PHONY: clean
 

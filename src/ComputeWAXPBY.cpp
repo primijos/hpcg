@@ -41,8 +41,10 @@
 */
 
 #include "defs.fpga.h"
+#ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
 	 copy_in([n]xv,[n]yv) copy_inout([n]wv)
+#endif
 #pragma omp task inout([n]wv) in([n]xv,[n]yv)
 void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, double *yv, double *wv) {
   if (alpha==1.0) {

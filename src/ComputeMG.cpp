@@ -39,8 +39,10 @@
   @return Returns zero on success and a non-zero value otherwise.
 */
 #include "defs.fpga.h"
+#ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
 	 copy_in([rfl]rfv,[nc]f2c,[Axfl]Axfv) copy_inout([nc]rcv)
+#endif
 #pragma omp task inout([nc]rcv) in([rfl]rfv,[nc]f2c,[Axfl]Axfv)
 void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_int_t *f2c, double *Axfv, local_int_t Axfl, local_int_t rfl) {
   for (local_int_t i=0; i<nc; ++i) rcv[i] = rfv[f2c[i]] - Axfv[f2c[i]];
@@ -75,8 +77,10 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 
   @return Returns zero on success and a non-zero value otherwise.
 */
+#ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
 	 copy_in([nc]xcv,[nc]f2c) copy_inout([xfl]xfv)
+#endif
 #pragma omp task inout([xfl]xfv) in([nc]xcv,[nc]f2c)
 void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_int_t *f2c, local_int_t xfl) {
   for (local_int_t i=0; i<nc; ++i) xfv[f2c[i]] += xcv[i]; // This loop is safe to vectorize

@@ -107,9 +107,9 @@ HPCG_LIBS     =
 #    *) Build with OpenMP enabled.
 #    *) Not generate debugging output.
 #
-#HPCG_OPTS     = -DHPCG_NO_MPI
-HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP
-#HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG -DHPCG_DETAILED_DEBUG
+#HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_CONTIGUOUS_ARRAYS
+HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_CONTIGUOUS_ARRAYS
+#HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG -DHPCG_DETAILED_DEBUG -DHPCG_CONTIGUOUS_ARRAYS
 #HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG
 #
 # ----------------------------------------------------------------------
@@ -139,7 +139,7 @@ LINKFLAGS    = $(CXXFLAGS)
 #bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance" --variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
 #
 #bitstream-p: bin/xhpcg
-#$(CXX) $(CXXFLGAS) -DRUNTIME_MODE=\"perf\" $^ -o $(PROGRAM_)-p $(LINKFLAGS) \
+#$(CXX) $(CXXFLAGS) -DRUNTIME_MODE=\"perf\" $^ -o $(PROGRAM_)-p $(LINKFLAGS) \
 #--bitstream-generation $(LINKFLAGS) \
 #--variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
 #

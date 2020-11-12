@@ -40,8 +40,10 @@
 */
 
 #include "defs.fpga.h"
+#ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
 	 copy_in([n]xv,[n]yv) copy_inout([1]result)
+#endif
 #pragma omp task inout([1]result) in([n]xv,[n]yv)
 void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double *result) {
 	double local_result = 0.0;
