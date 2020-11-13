@@ -19,7 +19,6 @@
  */
 
 #include "ComputeDotProduct.hpp"
-#include "ComputeDotProduct_ref.hpp"
 
 /*!
   Routine to compute the dot product of two vectors.

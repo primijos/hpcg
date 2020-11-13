@@ -19,6 +19,7 @@
  */
 
 #include "OptimizeProblem.hpp"
+#include <stdio.h>
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -38,6 +39,28 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 
   // This function can be used to completely transform any part of the data structures.
   // Right now it does nothing, so compiling with a check for unused variables results in complaints
+	
+	SparseMatrix *curA = &A;
+	
+	int level = 0;
+	while (curA!=0) {
+		local_int_t nrow = curA->localNumberOfRows;
+		int *diagonalIndexes = new int[curA->localNumberOfRows];
+		for (local_int_t i=0; i < nrow; ++i) {
+			int currentNumberOfNonzeros = curA->nonzerosInRow[i];
+      local_int_t *currentColIndices = curA->mtxIndL[i];
+			diagonalIndexes[i]=-1;
+      for (int j=0; j< currentNumberOfNonzeros && diagonalIndexes[i]==-1; j++) { // scan neighbors
+        local_int_t curCol = currentColIndices[j];
+				if (curCol==i) {
+					diagonalIndexes[i]=j;
+				}
+			}
+		}
+		curA->optimizationData = diagonalIndexes;
+		curA = curA->Ac;
+		level++;
+	}
 
 #if defined(HPCG_USE_MULTICOLORING)
   const local_int_t nrow = A.localNumberOfRows;
@@ -102,6 +125,6 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+	return (sizeof(double)*A.localNumberOfRows);
 
 }

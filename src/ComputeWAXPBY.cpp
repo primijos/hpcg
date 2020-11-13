@@ -19,7 +19,6 @@
  */
 
 #include "ComputeWAXPBY.hpp"
-#include "ComputeWAXPBY_ref.hpp"
 
 /*!
   Routine to compute the update of a vector with the sum of two

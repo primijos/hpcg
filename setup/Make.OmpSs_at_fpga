@@ -121,14 +121,17 @@ HPCG_DEFS     = $(HPCG_OPTS) $(HPCG_INCLUDES)
 # ----------------------------------------------------------------------
 #
 FPGA_HWRUNTIME         ?= som
-FPGA_CLOCK             ?= 250
+#FPGA_CLOCK             ?= 250
+FPGA_CLOCK             ?= 150
 #FPGA_MEMORY_PORT_WIDTH ?= 128
 BOARD									 ?= zedboard
+#BOARD									 ?= alveo_u200
 
 CROSS_COMPILE ?= arm-linux-gnueabihf-
 CXX          = $(CROSS_COMPILE)fpgacxx
 #CXXFLAGS     = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
-CXXFLAGS     = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\"
+#CXXFLAGS     = $(HPCG_DEFS) $(MODE) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -g -k
+CXXFLAGS     = $(HPCG_DEFS) $(MODE) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\"
 
 bitstream: CXXFLAGS = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss --bitstream-generation -DRUNTIME_MODE=\"perf\"
 

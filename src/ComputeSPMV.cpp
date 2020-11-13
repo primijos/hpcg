@@ -19,7 +19,6 @@
  */
 
 #include "ComputeSPMV.hpp"
-#include "ComputeSPMV_ref.hpp"
 
 /*!
   Routine to compute sparse matrix vector product y = Ax where:
