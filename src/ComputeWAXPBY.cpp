@@ -42,17 +42,35 @@
 #include "defs.fpga.h"
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-	 copy_in([n]xv,[n]yv) copy_inout([n]wv)
+	 copy_in([WAXPBY_BLOCK]xv,[WAXPBY_BLOCK]yv) copy_inout([WAXPBY_BLOCK]wv) localmem_copies
 #endif
-#pragma omp task inout([n]wv) in([n]xv,[n]yv)
-void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, double *yv, double *wv) {
+#pragma omp task inout([WAXPBY_BLOCK]wv) in([WAXPBY_BLOCK]xv,[WAXPBY_BLOCK]yv) no_copy_deps
+void compute_waxpby_fpga_block(double alpha, double *xv, double beta, double *yv, double *wv) {
   if (alpha==1.0) {
-    for (local_int_t i=0; i<n; i++) wv[i] = xv[i] + beta * yv[i];
+    for (local_int_t i=0; i<WAXPBY_BLOCK; i++) wv[i] = xv[i] + beta * yv[i];
   } else if (beta==1.0) {
-    for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + yv[i];
+    for (local_int_t i=0; i<WAXPBY_BLOCK; i++) wv[i] = alpha * xv[i] + yv[i];
   } else  {
-    for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + beta * yv[i];
+    for (local_int_t i=0; i<WAXPBY_BLOCK; i++) wv[i] = alpha * xv[i] + beta * yv[i];
   }
+}
+
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
+	copy_in([n]xv,[n]yv) copy_inout([n]wv)
+#endif
+#pragma omp task in([n]xv,[n]yv) inout([n]wv)
+void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, double *yv, double *wv) {
+	local_int_t nblocks = n / WAXPBY_BLOCK;
+	// XXX TODO check for block sizes non-divisible by n
+	int remainder = n % WAXPBY_BLOCK;
+
+	for (local_int_t i=0;i<nblocks;i++) {
+		double *_xv = xv + i*WAXPBY_BLOCK;
+		double *_yv = yv + i*WAXPBY_BLOCK;
+		double *_wv = wv + i*WAXPBY_BLOCK;
+		compute_waxpby_fpga_block(alpha,_xv,beta,_yv,_wv);
+	}
 }
 
 int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
@@ -64,6 +82,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
   double * xv = x.values;
   double * yv = y.values;
   double * wv = w.values;
+	// XXX TODO check for block sizes non-divisible by n
+	assert(n % WAXPBY_BLOCK==0);
 
 	compute_waxpby_fpga(n,alpha,xv,beta,yv,wv);
 #pragma omp taskwait

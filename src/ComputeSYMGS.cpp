@@ -19,6 +19,8 @@
  */
 
 #include "ComputeSYMGS.hpp"
+#include "ComputeSYMGS_ref.hpp"
+#include <stdio.h>
 
 /*!
   Routine to compute one step of symmetric Gauss-Seidel:
@@ -48,17 +50,17 @@
 */
 
 #include "defs.fpga.h"
+
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-		copy_in([Alen]AmatrixValues,[Alen]AmtxIndL,[nrow]AnonzerosInRow,[nrow]matrixDiagonalI,[rl]rv) copy_inout([xl]xv)
+		copy_in([SYMGS_BLOCK_M]AmatrixValues,[SYMGS_BLOCK_M]AmtxIndL,[SYMGS_BLOCK]AnonzerosInRow,[SYMGS_BLOCK]matrixDiagonalI,[SYMGS_BLOCK]rv) localmem_copies
 #endif
-#pragma omp task inout([xl]xv) in([Alen]AmatrixValues,[Alen]AmtxIndL,[nrow]AnonzerosInRow,[nrow]matrixDiagonalI,[rl]rv)
-void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValues, local_int_t *AmtxIndL, char* AnonzerosInRow, int *matrixDiagonalI, const double *rv, local_int_t rl, double *xv, local_int_t xl) {
-	local_int_t numberOfNonzerosPerRow = 27;
-
-  for (local_int_t i=0; i< nrow; i++) {
-		const double * const currentValues = AmatrixValues + i*numberOfNonzerosPerRow;
-		const local_int_t * const currentColIndices = AmtxIndL + i*numberOfNonzerosPerRow;
+#pragma omp task inout([xl]xv) in([SYMGS_BLOCK_M]AmatrixValues,[SYMGS_BLOCK_M]AmtxIndL,[SYMGS_BLOCK]AnonzerosInRow,[SYMGS_BLOCK]matrixDiagonalI,[SYMGS_BLOCK]rv) no_copy_deps
+void compute_symgs_fpga_block_fwd(local_int_t block_num, double *AmatrixValues, local_int_t *AmtxIndL, char* AnonzerosInRow, int *matrixDiagonalI, const double *rv, double *xv, local_int_t xl) {
+  for (local_int_t i=0; i< SYMGS_BLOCK; i++) {
+		local_int_t ii = block_num*SYMGS_BLOCK + i;
+		const double * const currentValues = AmatrixValues + i*NNZ_PER_ROW;
+		const local_int_t * const currentColIndices = AmtxIndL + i*NNZ_PER_ROW;
 		const char currentNumberOfNonzeros = AnonzerosInRow[i];
     const double  currentDiagonal = currentValues[matrixDiagonalI[i]]; // Current diagonal value
     double sum = rv[i]; // RHS value
@@ -67,17 +69,23 @@ void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValue
       local_int_t curCol = currentColIndices[j];
       sum -= currentValues[j] * xv[curCol];
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+    sum += xv[ii]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-    xv[i] = sum/currentDiagonal;
+    xv[ii] = sum/currentDiagonal;
 
   }
+}
 
-  // Now the back sweep.
-
-  for (local_int_t i=nrow-1; i>=0; i--) {
-		const double * const currentValues = AmatrixValues + i*numberOfNonzerosPerRow;
-		const local_int_t * const currentColIndices = AmtxIndL + i*numberOfNonzerosPerRow;
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
+		copy_in([SYMGS_BLOCK_M]AmatrixValues,[SYMGS_BLOCK_M]AmtxIndL,[SYMGS_BLOCK]AnonzerosInRow,[SYMGS_BLOCK]matrixDiagonalI,[SYMGS_BLOCK]rv) localmem_copies
+#endif
+#pragma omp task inout([xl]xv) in([SYMGS_BLOCK_M]AmatrixValues,[SYMGS_BLOCK_M]AmtxIndL,[SYMGS_BLOCK]AnonzerosInRow,[SYMGS_BLOCK]matrixDiagonalI,[SYMGS_BLOCK]rv) no_copy_deps
+void compute_symgs_fpga_block_bwd(local_int_t block_num, double *AmatrixValues, local_int_t *AmtxIndL, char* AnonzerosInRow, int *matrixDiagonalI, const double *rv, double *xv, local_int_t xl) {
+  for (local_int_t i=SYMGS_BLOCK-1; i>=0; i--) {
+		local_int_t ii = block_num*SYMGS_BLOCK + i;
+		const double * const currentValues = AmatrixValues + i*NNZ_PER_ROW;
+		const local_int_t * const currentColIndices = AmtxIndL + i*NNZ_PER_ROW;
 		const char currentNumberOfNonzeros = AnonzerosInRow[i];
     const double  currentDiagonal = currentValues[matrixDiagonalI[i]]; // Current diagonal value
     double sum = rv[i]; // RHS value
@@ -86,10 +94,42 @@ void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValue
       local_int_t curCol = currentColIndices[j];
       sum -= currentValues[j]*xv[curCol];
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+    sum += xv[ii]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-    xv[i] = sum/currentDiagonal;
+    xv[ii] = sum/currentDiagonal;
   }
+}
+
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
+		copy_in([Alen]AmatrixValues,[Alen]AmtxIndL,[nrow]AnonzerosInRow,[nrow]matrixDiagonalI,[rl]rv) copy_inout([xl]xv)
+#endif
+#pragma omp task inout([xl]xv) in([Alen]AmatrixValues,[Alen]AmtxIndL,[nrow]AnonzerosInRow,[nrow]matrixDiagonalI,[rl]rv)
+void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValues, local_int_t *AmtxIndL, char* AnonzerosInRow, int *matrixDiagonalI, const double *rv, local_int_t rl, double *xv, local_int_t xl) {
+	local_int_t nblocks = nrow / SYMGS_BLOCK;
+	// XXX TODO check for block sizes non-divisible by n
+	int remainder = nrow % SYMGS_BLOCK;
+
+	for (local_int_t i=0;i<nblocks;i++) {
+		double *_AmatrixValues = AmatrixValues + i*SYMGS_BLOCK_M;
+		local_int_t *_AmtxIndL = AmtxIndL + i*SYMGS_BLOCK_M;
+		char *_AnonzerosInRow = AnonzerosInRow + i*SYMGS_BLOCK;
+		int *_matrixDiagonalI = matrixDiagonalI + i*SYMGS_BLOCK;
+		const double *_rv = rv + i*SYMGS_BLOCK;
+
+		compute_symgs_fpga_block_fwd(i,_AmatrixValues,_AmtxIndL,_AnonzerosInRow,_matrixDiagonalI,_rv,xv,xl);
+	}
+
+  // Now the back sweep.
+	for (local_int_t i=nblocks-1;i>=0;i--) {
+		double *_AmatrixValues = AmatrixValues + i*SYMGS_BLOCK_M;
+		local_int_t *_AmtxIndL = AmtxIndL + i*SYMGS_BLOCK_M;
+		char *_AnonzerosInRow = AnonzerosInRow + i*SYMGS_BLOCK;
+		int *_matrixDiagonalI = matrixDiagonalI + i*SYMGS_BLOCK;
+		const double *_rv = rv + i*SYMGS_BLOCK;
+
+		compute_symgs_fpga_block_bwd(i,_AmatrixValues,_AmtxIndL,_AnonzerosInRow,_matrixDiagonalI,_rv,xv,xl);
+	}
 }
 
 int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
@@ -110,9 +150,8 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 	double *AmatrixValues = A.matrixValues[0];
 	local_int_t *AmtxIndL = A.mtxIndL[0];
 	int *matrixDiagonalI = (int*)A.optimizationData;
-	local_int_t numberOfNonzerosPerRow = 27;
 
-	compute_symgs_fpga(nrow,A.localNumberOfRows*numberOfNonzerosPerRow,AmatrixValues,AmtxIndL,AnonzerosInRow,matrixDiagonalI,rv,rl,xv,xl);
+	compute_symgs_fpga(nrow,A.localNumberOfRows*NNZ_PER_ROW,AmatrixValues,AmtxIndL,AnonzerosInRow,matrixDiagonalI,rv,rl,xv,xl);
 #pragma omp taskwait
 
   return 0;

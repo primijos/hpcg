@@ -40,11 +40,28 @@
 #include "defs.fpga.h"
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
+	 copy_in([REST_BLOCK]f2c) copy_inout([REST_BLOCK]rcv) localmem_copies
+#endif
+#pragma omp task inout([REST_BLOCK]rcv) in([rfl]rfv,[REST_BLOCK]f2c,[Axfl]Axfv) no_copy_deps
+void compute_restriction_fpga_block(double *rcv, double *rfv, local_int_t *f2c, double *Axfv, local_int_t Axfl, local_int_t rfl) {
+  for (local_int_t i=0; i<REST_BLOCK; ++i) rcv[i] = rfv[f2c[i]] - Axfv[f2c[i]];
+}
+
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
 	 copy_in([rfl]rfv,[nc]f2c,[Axfl]Axfv) copy_inout([nc]rcv)
 #endif
 #pragma omp task inout([nc]rcv) in([rfl]rfv,[nc]f2c,[Axfl]Axfv)
 void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_int_t *f2c, double *Axfv, local_int_t Axfl, local_int_t rfl) {
-  for (local_int_t i=0; i<nc; ++i) rcv[i] = rfv[f2c[i]] - Axfv[f2c[i]];
+	local_int_t nblocks = nc / REST_BLOCK;
+	// XXX TODO check for block sizes non-divisible by n
+	int remainder = nc % REST_BLOCK;
+
+	for (local_int_t i=0;i<nblocks;i++) {
+		double *_rcv = rcv + i*REST_BLOCK;
+		local_int_t *_f2c = f2c + i*REST_BLOCK;
+		compute_restriction_fpga_block(_rcv,rfv,_f2c,Axfv,Axfl,rfl);
+	}
 }
 
 int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
@@ -57,6 +74,8 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 
 	local_int_t rfl = rf.localLength;
   local_int_t Axfl = A.mgData->Axf->localLength;
+	// XXX TODO check for block sizes non-divisible by n
+	assert(nc % REST_BLOCK == 0);
 
 	compute_restriction_fpga(nc,rcv,rfv,f2c,Axfv,Axfl,rfl);
 #pragma omp taskwait
@@ -78,12 +97,30 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 */
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
+	 copy_in([PROL_BLOCK]xcv,[PROL_BLOCK]f2c) copy_inout([xfl]xfv) localmem_copies
+#endif
+#pragma omp task inout([xfl]xfv) in([PROL_BLOCK]xcv,[PROL_BLOCK]f2c) no_copy_deps
+void compute_prolongation_fpga_block(double *xfv, double *xcv, local_int_t *f2c, local_int_t xfl) {
+  for (local_int_t i=0; i<PROL_BLOCK; ++i) xfv[f2c[i]] += xcv[i]; // This loop is safe to vectorize
+}
+
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
 	 copy_in([nc]xcv,[nc]f2c) copy_inout([xfl]xfv)
 #endif
 #pragma omp task inout([xfl]xfv) in([nc]xcv,[nc]f2c)
 void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_int_t *f2c, local_int_t xfl) {
-  for (local_int_t i=0; i<nc; ++i) xfv[f2c[i]] += xcv[i]; // This loop is safe to vectorize
+	local_int_t nblocks = nc / PROL_BLOCK;
+	// XXX TODO check for block sizes non-divisible by n
+	int remainder = nc % PROL_BLOCK;
+
+	for (local_int_t i=0;i<nblocks;i++) {
+		double *_xcv = xcv + i*PROL_BLOCK;
+		local_int_t *_f2c = f2c + i*PROL_BLOCK;
+		compute_prolongation_fpga_block(xfv, _xcv, _f2c, xfl);
+	}
 }
+
 int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
 
   double * xfv = xf.values;
@@ -92,6 +129,8 @@ int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
   local_int_t nc = Af.mgData->rc->localLength;
 
   local_int_t xfl = xf.localLength;
+	// XXX TODO check for block sizes non-divisible by n
+	assert(nc % PROL_BLOCK == 0);
 
 	compute_prolongation_fpga(nc,xfv,xcv,f2c,xfl);
 #pragma omp taskwait
