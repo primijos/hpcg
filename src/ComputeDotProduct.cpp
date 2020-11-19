@@ -39,20 +39,39 @@
 */
 
 #include "defs.fpga.h"
+
+#ifndef OMPSS_ONLY_SMP
+#pragma omp target device(fpga) num_instances(1) \
+	 copy_in([DOTPRODUCT_BLOCK]xv,[DOTPRODUCT_BLOCK]yv) copy_inout([1]result) localmem_copies
+#endif
+#pragma omp task inout([1]result) in([DOTPRODUCT_BLOCK]xv,[DOTPRODUCT_BLOCK]yv) no_copy_deps
+void compute_dot_product_fpga_block(double *xv,double *yv, double *result) {
+	double local_result = 0.0;
+  if (yv==xv) {
+    for (local_int_t i=0; i<DOTPRODUCT_BLOCK; i++) local_result += xv[i]*xv[i];
+  } else {
+    for (local_int_t i=0; i<DOTPRODUCT_BLOCK; i++) local_result += xv[i]*yv[i];
+  }
+	*result += local_result;
+}
+
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
 	 copy_in([n]xv,[n]yv) copy_inout([1]result)
 #endif
 #pragma omp task inout([1]result) in([n]xv,[n]yv)
 void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double *result) {
-	double local_result = 0.0;
-  if (yv==xv) {
-    for (local_int_t i=0; i<n; i++) local_result += xv[i]*xv[i];
-  } else {
-    for (local_int_t i=0; i<n; i++) local_result += xv[i]*yv[i];
-  }
-	*result = local_result;
+	local_int_t nblocks = n / DOTPRODUCT_BLOCK;
+	// XXX TODO check for block sizes non-divisible by n
+	int remainder = n % DOTPRODUCT_BLOCK;
+
+	for (local_int_t i=0;i<nblocks;i++) {
+		double *_xv = xv + i*DOTPRODUCT_BLOCK;
+		double *_yv = yv + i*DOTPRODUCT_BLOCK;
+		compute_dot_product_fpga_block(_xv,_yv,result);
+	}
 }
+
 int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
     double & result, double & time_allreduce, bool & isOptimized) {
 
@@ -62,7 +81,11 @@ int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
   double local_result = 0.0;
   double * xv = x.values;
   double * yv = y.values;
+	// XXX TODO check for block sizes non-divisible by n
+	assert(n % DOTPRODUCT_BLOCK == 0);
 
+	// XXX TODO allow multi-instances by adding a reduction buffer + reduction
+	// task
 	compute_dot_product_fpga(n,xv,yv,&local_result);
 #pragma omp taskwait
 

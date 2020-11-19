@@ -32,6 +32,7 @@ using std::endl;
 #include "hpcg.hpp"
 #endif
 #include <cassert>
+#include <stdio.h>
 
 #include "GenerateProblem_ref.hpp"
 
@@ -102,6 +103,7 @@ void GenerateProblem_ref(SparseMatrix & A, Vector * b, Vector * x, Vector * xexa
   }
 
 #ifndef HPCG_CONTIGUOUS_ARRAYS
+#error "OmpSs@FPGA requires contiguous arrays"
   // Now allocate the arrays pointed to
   for (local_int_t i=0; i< localNumberOfRows; ++i)
     mtxIndL[i] = new local_int_t[numberOfNonzerosPerRow];
