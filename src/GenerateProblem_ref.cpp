@@ -32,6 +32,7 @@ using std::endl;
 #include "hpcg.hpp"
 #endif
 #include <cassert>
+#include <stdio.h>
 
 #include "GenerateProblem_ref.hpp"
 
