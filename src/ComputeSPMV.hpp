@@ -18,5 +18,6 @@
 #include "SparseMatrix.hpp"
 
 int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y);
+int ComputeSPMV_nw( const SparseMatrix & A, Vector & x, Vector & y);
 
 #endif  // COMPUTESPMV_HPP

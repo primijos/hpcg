@@ -1,3 +1,5 @@
+#ifndef FPGA_H
+#define FPGA_H
 /*!
   This defines the type for integers that have local subdomain dimension.
 
@@ -20,3 +22,4 @@ typedef long long global_int_t;
 // This macro should be defined if the global_int_t is not long long
 // in order to stop complaints from non-C++11 compliant compilers.
 //#define HPCG_NO_LONG_LONG
+#endif

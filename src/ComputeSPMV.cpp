@@ -56,7 +56,7 @@ void compute_spmv_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValues
     yv[i] = sum;
   }
 }
-int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
+int ComputeSPMV_nw( const SparseMatrix & A, Vector & x, Vector & y) {
 
   assert(x.localLength>=A.localNumberOfColumns); // Test vector lengths
   assert(y.localLength>=A.localNumberOfRows);
@@ -76,6 +76,11 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
 	local_int_t numberOfNonzerosPerRow = 27;
 
 	compute_spmv_fpga(nrow,A.localNumberOfRows*numberOfNonzerosPerRow,AmatrixValues,AmtxIndL,AnonzerosInRow,yv,yl,xv,xl);
-#pragma omp taskwait
+#pragma omp taskwait noflush
   return 0;
+}
+int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
+	ComputeSPMV_nw(A,x,y);
+	#pragma omp taskwait
+	return 0;
 }

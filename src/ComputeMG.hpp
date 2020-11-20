@@ -18,5 +18,6 @@
 #include "Vector.hpp"
 
 int ComputeMG(const SparseMatrix  & A, const Vector & r, Vector & x);
+int ComputeMG_nw(const SparseMatrix  & A, const Vector & r, Vector & x);
 
 #endif // COMPUTEMG_HPP

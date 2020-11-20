@@ -54,6 +54,7 @@ inline void InitializeVector(Vector & v, local_int_t localLength) {
 
   @param[inout] v - On entrance v is initialized, on exit all its values are zero.
  */
+void ZeroVector_nw(Vector & v);
 inline void ZeroVector(Vector & v) {
   local_int_t localLength = v.localLength;
   double * vv = v.values;
@@ -90,6 +91,7 @@ inline void FillRandomVector(Vector & v) {
   @param[in] v Input vector
   @param[in] w Output vector
  */
+void CopyVector_nw(const Vector & v, Vector & w);
 inline void CopyVector(const Vector & v, Vector & w) {
   local_int_t localLength = v.localLength;
   assert(w.localLength >= localLength);
