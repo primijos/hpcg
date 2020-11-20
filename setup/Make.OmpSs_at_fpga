@@ -120,12 +120,14 @@ HPCG_DEFS     = $(HPCG_OPTS) $(HPCG_INCLUDES)
 # - Compilers / linkers - Optimization flags ---------------------------
 # ----------------------------------------------------------------------
 #
-FPGA_HWRUNTIME         ?= som
-#FPGA_CLOCK             ?= 250
-FPGA_CLOCK             ?= 150
+#FPGA_HWRUNTIME         ?= som
+FPGA_HWRUNTIME         ?= pom
+FPGA_CLOCK             ?= 250
+#FPGA_CLOCK             ?= 150
 FPGA_MEMORY_PORT_WIDTH ?= 128
-BOARD									 ?= zedboard
+#BOARD									 ?= zedboard
 #BOARD									 ?= alveo_u200
+BOARD									 ?= zcu102
 
 #CROSS_COMPILE ?= arm-linux-gnueabihf-
 CXX          = $(CROSS_COMPILE)fpgacxx
@@ -136,20 +138,20 @@ DEBUGFLAGS     = $(HPCG_DEFS) $(MODE) -O0 -ffast-math -ftree-vectorize -ftree-ve
 CXXFLAGS     =  $(HPCG_DEFS) $(MODE) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
 #CXXFLAGS     = $(DEBUGFLAGS)
 
-bitstream: CXXFLAGS = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss --bitstream-generation -DRUNTIME_MODE=\"perf\"
+bitstream: CXXFLAGS = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss --bitstream-generation -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DRUNTIME_MODE=\"perf\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
 
 #
 LINKER       = $(CXX)
 LINKFLAGS    = $(CXXFLAGS)
 
-#bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance" --variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
+bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance," --variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
+#bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance"
 #
 #bitstream-p: bin/xhpcg
 #$(CXX) $(CXXFLAGS) -DRUNTIME_MODE=\"perf\" $^ -o $(PROGRAM_)-p $(LINKFLAGS) \
 #--bitstream-generation $(LINKFLAGS) \
 #--variable=fpga_memory_port_width:$(FPGA_MEMORY_PORT_WIDTH)
 #
-bitstream: LINKFLAGS = $(CXXFLAGS) --Wf,"--name=hpcg,--board=$(BOARD),-c=$(FPGA_CLOCK),--hwruntime=$(FPGA_HWRUNTIME),--interconnection_opt=performance"
 
 #
 ARCHIVER     = ar

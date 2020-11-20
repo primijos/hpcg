@@ -87,8 +87,7 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
   TICK(); ComputeSPMV_nw(A, p, Ap); TOCK(t3); // Ap = A*p
   TICK(); ComputeWAXPBY_nw(nrow, 1.0, b, -1.0, Ap, r, A.isWaxpbyOptimized);  TOCK(t2); // r = b - Ax (x stored in p)
   TICK(); ComputeDotProduct_nw(nrow, r, r, normr, t4, A.isDotProductOptimized); TOCK(t1);
-#pragma omp taskwait
-	//printf("Waiting (a) in CG normr=%g\n",normr);
+#pragma omp taskwait on(normr)
   normr = sqrt(normr);
 #ifdef HPCG_DEBUG
   if (A.geom->rank==0) HPCG_fout << "Initial Residual = "<< normr << std::endl;
@@ -113,27 +112,23 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
     if (k == 1) {
       TICK(); ComputeWAXPBY_nw(nrow, 1.0, z, 0.0, z, p, A.isWaxpbyOptimized); TOCK(t2); // Copy Mr to p
       TICK(); ComputeDotProduct_nw (nrow, r, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
-#pragma omp taskwait
-	//printf("Waiting (b) in CG rtz=%g\n",rtz);
+#pragma omp taskwait on(rtz)
     } else {
       oldrtz = rtz;
       TICK(); ComputeDotProduct_nw (nrow, r, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
-#pragma omp taskwait
-	//printf("Waiting (c) in CG rtz=%g\n",rtz);
+#pragma omp taskwait on(rtz)
       beta = rtz/oldrtz;
       TICK(); ComputeWAXPBY_nw (nrow, 1.0, z, beta, p, p, A.isWaxpbyOptimized);  TOCK(t2); // p = beta*p + z
     }
 
     TICK(); ComputeSPMV_nw(A, p, Ap); TOCK(t3); // Ap = A*p
     TICK(); ComputeDotProduct_nw(nrow, p, Ap, pAp, t4, A.isDotProductOptimized); TOCK(t1); // alpha = p'*Ap
-#pragma omp taskwait
-	//printf("Waiting (d) in CG pAp=%g\n",pAp);
+#pragma omp taskwait on(pAp)
     alpha = rtz/pAp;
     TICK(); ComputeWAXPBY_nw(nrow, 1.0, x, alpha, p, x, A.isWaxpbyOptimized);// x = x + alpha*p
             ComputeWAXPBY_nw(nrow, 1.0, r, -alpha, Ap, r, A.isWaxpbyOptimized);  TOCK(t2);// r = r - alpha*Ap
     TICK(); ComputeDotProduct_nw(nrow, r, r, normr, t4, A.isDotProductOptimized); TOCK(t1);
-#pragma omp taskwait
-	//printf("Waiting (e) in CG normr=%g\n",normr);
+#pragma omp taskwait on(normr)
     normr = sqrt(normr);
 #ifdef HPCG_DEBUG
     if (A.geom->rank==0 && (k%print_freq == 0 || k == max_iter))
@@ -145,6 +140,7 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
 		printf("\tniters=%d time=%g residual=%10.20f tolerance=%10.20f\n",niters,t99,normr/normr0,tolerance);
 #endif
   }
+#pragma omp taskwait
 
   // Store times
   times[1] += t1; // dot-product time
