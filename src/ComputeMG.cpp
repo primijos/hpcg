@@ -64,7 +64,7 @@ void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_in
 	}
 }
 
-int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
+int ComputeRestriction_nw(const SparseMatrix & A, const Vector & rf) {
 
   double * Axfv = A.mgData->Axf->values;
   double * rfv = rf.values;
@@ -78,9 +78,13 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 	assert(nc % REST_BLOCK == 0);
 
 	compute_restriction_fpga(nc,rcv,rfv,f2c,Axfv,Axfl,rfl);
-#pragma omp taskwait
 
   return 0;
+}
+int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
+	ComputeRestriction_nw(A,rf);
+#pragma omp taskwait
+	return 0;
 }
 
 /*!
@@ -121,7 +125,7 @@ void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_i
 	}
 }
 
-int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
+int ComputeProlongation_nw(const SparseMatrix & Af, Vector & xf) {
 
   double * xfv = xf.values;
   double * xcv = Af.mgData->xc->values;
@@ -133,9 +137,13 @@ int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
 	assert(nc % PROL_BLOCK == 0);
 
 	compute_prolongation_fpga(nc,xfv,xcv,f2c,xfl);
-#pragma omp taskwait
 
   return 0;
+}
+int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
+	ComputeProlongation_nw(Af,xf);
+#pragma omp taskwait
+	return 0;
 }
 
 /*!
@@ -147,29 +155,37 @@ int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
 
   @see ComputeMG_ref
 */
-int ComputeMG(const SparseMatrix  & A, const Vector & r, Vector & x) {
+int ComputeMG_nw(const SparseMatrix  & A, const Vector & r, Vector & x) {
 
   assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
 
-  ZeroVector(x); // initialize x to zero
+  ZeroVector_nw(x); // initialize x to zero
 
   int ierr = 0;
   if (A.mgData!=0) { // Go to next coarse level if defined
     int numberOfPresmootherSteps = A.mgData->numberOfPresmootherSteps;
-    for (int i=0; i< numberOfPresmootherSteps; ++i) ierr += ComputeSYMGS(A, r, x);
+    for (int i=0; i< numberOfPresmootherSteps; ++i) ierr += ComputeSYMGS_nw(A, r, x);
     if (ierr!=0) return ierr;
-    ierr = ComputeSPMV(A, x, *A.mgData->Axf); if (ierr!=0) return ierr;
+    ierr = ComputeSPMV_nw(A, x, *A.mgData->Axf); if (ierr!=0) return ierr;
     // Perform restriction operation using simple injection
-    ierr = ComputeRestriction(A, r);  if (ierr!=0) return ierr;
-    ierr = ComputeMG(*A.Ac,*A.mgData->rc, *A.mgData->xc);  if (ierr!=0) return ierr;
-    ierr = ComputeProlongation(A, x);  if (ierr!=0) return ierr;
+    ierr = ComputeRestriction_nw(A, r);  if (ierr!=0) return ierr;
+    ierr = ComputeMG_nw(*A.Ac,*A.mgData->rc, *A.mgData->xc);  if (ierr!=0) return ierr;
+    ierr = ComputeProlongation_nw(A, x);  if (ierr!=0) return ierr;
     int numberOfPostsmootherSteps = A.mgData->numberOfPostsmootherSteps;
-    for (int i=0; i< numberOfPostsmootherSteps; ++i) ierr += ComputeSYMGS(A, r, x);
+    for (int i=0; i< numberOfPostsmootherSteps; ++i) ierr += ComputeSYMGS_nw(A, r, x);
     if (ierr!=0) return ierr;
   }
   else {
-    ierr = ComputeSYMGS(A, r, x);
+    ierr = ComputeSYMGS_nw(A, r, x);
     if (ierr!=0) return ierr;
   }
+#pragma omp taskwait noflush
+  return 0;
+}
+
+
+int ComputeMG(const SparseMatrix  & A, const Vector & r, Vector & x) {
+	ComputeMG_nw(A,r,x);
+#pragma omp taskwait
   return 0;
 }

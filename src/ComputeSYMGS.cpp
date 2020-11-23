@@ -19,7 +19,6 @@
  */
 
 #include "ComputeSYMGS.hpp"
-#include "ComputeSYMGS_ref.hpp"
 #include <stdio.h>
 
 /*!
@@ -132,7 +131,7 @@ void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValue
 	}
 }
 
-int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
+int ComputeSYMGS_nw( const SparseMatrix & A, const Vector & r, Vector & x) {
 
   assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
 
@@ -152,8 +151,14 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 	int *matrixDiagonalI = (int*)A.optimizationData;
 
 	compute_symgs_fpga(nrow,A.localNumberOfRows*NNZ_PER_ROW,AmatrixValues,AmtxIndL,AnonzerosInRow,matrixDiagonalI,rv,rl,xv,xl);
+#pragma omp taskwait noflush
+  return 0;
+}
+
+int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
+
+	ComputeSYMGS_nw(A,r,x);
 #pragma omp taskwait
 
   return 0;
 }
-

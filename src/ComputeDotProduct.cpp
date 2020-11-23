@@ -72,13 +72,12 @@ void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double 
 	}
 }
 
-int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
+int ComputeDotProduct_nw(const local_int_t n, const Vector & x, const Vector & y,
     double & result, double & time_allreduce, bool & isOptimized) {
 
   assert(x.localLength>=n); // Test vector lengths
   assert(y.localLength>=n);
 
-  double local_result = 0.0;
   double * xv = x.values;
   double * yv = y.values;
 	// XXX TODO check for block sizes non-divisible by n
@@ -86,10 +85,16 @@ int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
 
 	// XXX TODO allow multi-instances by adding a reduction buffer + reduction
 	// task
-	compute_dot_product_fpga(n,xv,yv,&local_result);
-#pragma omp taskwait
+#pragma omp task out(result)
+	{
+		result = 0.0;
+		compute_dot_product_fpga(n,xv,yv,&result);
+	}
+#pragma omp taskwait noflush
 
 #ifndef HPCG_NO_MPI
+#pragma omp taskwait on(result)
+  double local_result = result;
   // Use MPI's reduce function to collect all partial sums
   double t0 = mytimer();
   double global_result = 0.0;
@@ -99,8 +104,16 @@ int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
   time_allreduce += mytimer() - t0;
 #else
   time_allreduce += 0.0;
-  result = local_result;
+  //result = local_result;
 #endif
 
   return 0;
+}
+
+int ComputeDotProduct(const local_int_t n, const Vector & x, const Vector & y,
+    double & result, double & time_allreduce, bool & isOptimized) {
+
+		ComputeDotProduct_nw(n,x,y,result,time_allreduce,isOptimized);
+#pragma omp taskwait
+		return 0;
 }

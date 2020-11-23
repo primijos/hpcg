@@ -18,5 +18,6 @@
 #include "Vector.hpp"
 
 int ComputeSYMGS( const SparseMatrix  & A, const Vector & r, Vector & x);
+int ComputeSYMGS_nw( const SparseMatrix  & A, const Vector & r, Vector & x);
 
 #endif // COMPUTESYMGS_HPP

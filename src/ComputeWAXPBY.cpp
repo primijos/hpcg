@@ -73,7 +73,7 @@ void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, d
 	}
 }
 
-int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
+int ComputeWAXPBY_nw(const local_int_t n, const double alpha, const Vector & x,
     const double beta, const Vector & y, Vector & w, bool & isOptimized) {
 
   assert(x.localLength>=n); // Test vector lengths
@@ -86,6 +86,15 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
 	assert(n % WAXPBY_BLOCK==0);
 
 	compute_waxpby_fpga(n,alpha,xv,beta,yv,wv);
+#pragma omp taskwait noflush
+
+  return 0;
+}
+
+int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
+    const double beta, const Vector & y, Vector & w, bool & isOptimized) {
+
+		ComputeWAXPBY_nw(n,alpha,x,beta,y,w,isOptimized);
 #pragma omp taskwait
 
   return 0;
