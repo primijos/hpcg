@@ -45,14 +45,17 @@
 	 copy_in([DOTPRODUCT_BLOCK]xv,[DOTPRODUCT_BLOCK]yv) copy_inout([1]result) localmem_copies
 #endif
 #pragma omp task inout([1]result) in([DOTPRODUCT_BLOCK]xv,[DOTPRODUCT_BLOCK]yv) no_copy_deps
-void compute_dot_product_fpga_block(double *xv,double *yv, double *result) {
+void compute_dot_product_fpga_block(int whoami, double *xv,double *yv, double *result) {
 	double local_result = 0.0;
   if (yv==xv) {
     for (local_int_t i=0; i<DOTPRODUCT_BLOCK; i++) local_result += xv[i]*xv[i];
   } else {
     for (local_int_t i=0; i<DOTPRODUCT_BLOCK; i++) local_result += xv[i]*yv[i];
   }
-	*result += local_result;
+	if (whoami==0)
+		*result = local_result;
+	else
+		*result += local_result;
 }
 
 #ifndef OMPSS_ONLY_SMP
@@ -68,7 +71,7 @@ void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double 
 	for (local_int_t i=0;i<nblocks;i++) {
 		double *_xv = xv + i*DOTPRODUCT_BLOCK;
 		double *_yv = yv + i*DOTPRODUCT_BLOCK;
-		compute_dot_product_fpga_block(_xv,_yv,result);
+		compute_dot_product_fpga_block(i,_xv,_yv,result);
 	}
 }
 
@@ -83,13 +86,7 @@ int ComputeDotProduct_nw(const local_int_t n, const Vector & x, const Vector & y
 	// XXX TODO check for block sizes non-divisible by n
 	assert(n % DOTPRODUCT_BLOCK == 0);
 
-	// XXX TODO allow multi-instances by adding a reduction buffer + reduction
-	// task
-#pragma omp task out(result)
-	{
-		result = 0.0;
-		compute_dot_product_fpga(n,xv,yv,&result);
-	}
+	compute_dot_product_fpga(n,xv,yv,&result);
 #pragma omp taskwait noflush
 
 #ifndef HPCG_NO_MPI
