@@ -78,6 +78,7 @@ void compute_spmv_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValues
 
 		compute_spmv_fpga_block(_AmatrixValues,_AmtxIndL,_AnonzerosInRow,_yv,xv,xl);
 	}
+#pragma omp taskwait
 }
 
 int ComputeSPMV_nw( const SparseMatrix & A, Vector & x, Vector & y) {

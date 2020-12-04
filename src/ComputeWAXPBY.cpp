@@ -71,6 +71,7 @@ void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, d
 		double *_wv = wv + i*WAXPBY_BLOCK;
 		compute_waxpby_fpga_block(alpha,_xv,beta,_yv,_wv);
 	}
+#pragma omp taskwait
 }
 
 int ComputeWAXPBY_nw(const local_int_t n, const double alpha, const Vector & x,

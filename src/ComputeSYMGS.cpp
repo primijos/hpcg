@@ -129,6 +129,7 @@ void compute_symgs_fpga(local_int_t nrow, local_int_t Alen, double *AmatrixValue
 
 		compute_symgs_fpga_block_bwd(i,_AmatrixValues,_AmtxIndL,_AnonzerosInRow,_matrixDiagonalI,_rv,xv,xl);
 	}
+#pragma omp taskwait
 }
 
 int ComputeSYMGS_nw( const SparseMatrix & A, const Vector & r, Vector & x) {

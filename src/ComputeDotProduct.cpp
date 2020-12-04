@@ -73,6 +73,7 @@ void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double 
 		double *_yv = yv + i*DOTPRODUCT_BLOCK;
 		compute_dot_product_fpga_block(i,_xv,_yv,result);
 	}
+#pragma omp taskwait
 }
 
 int ComputeDotProduct_nw(const local_int_t n, const Vector & x, const Vector & y,

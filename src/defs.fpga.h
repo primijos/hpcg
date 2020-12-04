@@ -25,13 +25,16 @@ typedef long long global_int_t;
 
 // XXX TODO Check if this value can be dynamic at runtime (is here now
 // because localmem needs to know it at compile time)
+//#define BB 512
+#define BB 8
 static const unsigned int NNZ_PER_ROW=27;
-static const unsigned int WAXPBY_BLOCK=512;
-static const unsigned int DOTPRODUCT_BLOCK=512;
-static const unsigned int REST_BLOCK=512;
-static const unsigned int PROL_BLOCK=512;
-static const unsigned int SPMV_BLOCK=512;
+static const unsigned int VECTOR_OPS_BLOCK=BB;
+static const unsigned int WAXPBY_BLOCK=BB;
+static const unsigned int DOTPRODUCT_BLOCK=BB;
+static const unsigned int REST_BLOCK=BB;
+static const unsigned int PROL_BLOCK=BB;
+static const unsigned int SPMV_BLOCK=BB;
 static const unsigned int SPMV_BLOCK_M=SPMV_BLOCK*NNZ_PER_ROW;
-static const unsigned int SYMGS_BLOCK=512;
+static const unsigned int SYMGS_BLOCK=BB;
 static const unsigned int SYMGS_BLOCK_M=SYMGS_BLOCK*NNZ_PER_ROW;
 #endif

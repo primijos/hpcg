@@ -62,6 +62,7 @@ void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_in
 		local_int_t *_f2c = f2c + i*REST_BLOCK;
 		compute_restriction_fpga_block(_rcv,rfv,_f2c,Axfv,Axfl,rfl);
 	}
+#pragma omp taskwait
 }
 
 int ComputeRestriction_nw(const SparseMatrix & A, const Vector & rf) {
@@ -78,6 +79,7 @@ int ComputeRestriction_nw(const SparseMatrix & A, const Vector & rf) {
 	assert(nc % REST_BLOCK == 0);
 
 	compute_restriction_fpga(nc,rcv,rfv,f2c,Axfv,Axfl,rfl);
+#pragma omp taskwait noflush
 
   return 0;
 }
@@ -123,6 +125,7 @@ void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_i
 		local_int_t *_f2c = f2c + i*PROL_BLOCK;
 		compute_prolongation_fpga_block(xfv, _xcv, _f2c, xfl);
 	}
+#pragma omp taskwait
 }
 
 int ComputeProlongation_nw(const SparseMatrix & Af, Vector & xf) {
@@ -137,6 +140,7 @@ int ComputeProlongation_nw(const SparseMatrix & Af, Vector & xf) {
 	assert(nc % PROL_BLOCK == 0);
 
 	compute_prolongation_fpga(nc,xfv,xcv,f2c,xfl);
+#pragma omp taskwait noflush
 
   return 0;
 }
@@ -179,7 +183,6 @@ int ComputeMG_nw(const SparseMatrix  & A, const Vector & r, Vector & x) {
     ierr = ComputeSYMGS_nw(A, r, x);
     if (ierr!=0) return ierr;
   }
-#pragma omp taskwait noflush
   return 0;
 }
 
