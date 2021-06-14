@@ -18,6 +18,9 @@
  HPCG routine
  */
 
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
 #include "ComputeSYMGS.hpp"
 #include <stdio.h>
 

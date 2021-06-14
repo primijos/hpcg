@@ -19,6 +19,10 @@
  */
 
 #include "ComputeDotProduct.hpp"
+#ifndef HPCG_NO_MPI
+#include <mpi.h>
+#include "mytimer.hpp"
+#endif
 
 /*!
   Routine to compute the dot product of two vectors.

@@ -4,12 +4,12 @@ unset CROSS_COMPILE
 #export WHAT=bitstream
 export WHAT=bin/xhpcg
 
-export MODE=-DOMPSS_ONLY_SMP
-#unset MODE
+#export MODE=-DOMPSS_ONLY_SMP
+unset MODE
 
 export PATH=$PATH:~/Programs/Xilinx/Vivado/2020.1/bin/
 
-make arch=OmpSs_at_fpga MODE=$MODE $WHAT
+make arch=OmpSs_at_fpga_MPI MODE=$MODE $WHAT
 
 # bitstream
 #PATH=$PATH:~/Programs/Xilinx/Vivado/2020.1/bin/ make arch=OmpSs_at_fpga CXXFLAGS=-DOMPSS_ONLY_SMP bitstream

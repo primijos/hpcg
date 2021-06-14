@@ -21,6 +21,10 @@
 #include "ComputeSPMV.hpp"
 #include "ComputeSPMV_ref.hpp"
 #include <stdio.h>
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
+
 
 /*!
   Routine to compute sparse matrix vector product y = Ax where:
