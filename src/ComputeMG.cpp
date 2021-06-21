@@ -49,10 +49,10 @@ void compute_restriction_fpga_block(double *rcv, double *rfv, local_int_t *f2c, 
 
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-	 copy_in([rfl]rfv,[nc]f2c,[Axfl]Axfv) copy_inout([nc]rcv)
+	 copy_in([rfl]rfv,[nc]f2c,[Axfl]Axfv) copy_inout([rcl]rcv)
 #endif
-#pragma omp task inout([nc]rcv) in([rfl]rfv,[nc]f2c,[Axfl]Axfv)
-void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_int_t *f2c, double *Axfv, local_int_t Axfl, local_int_t rfl) {
+#pragma omp task inout([rcl]rcv) in([rfl]rfv,[nc]f2c,[Axfl]Axfv)
+void compute_restriction_fpga(local_int_t nc, double *rcv, double *rfv, local_int_t *f2c, double *Axfv, local_int_t Axfl, local_int_t rfl, local_int_t rcl) {
 	local_int_t nblocks = nc / REST_BLOCK;
 	// XXX TODO check for block sizes non-divisible by n
 	int remainder = nc % REST_BLOCK;
@@ -74,11 +74,12 @@ int ComputeRestriction_nw(const SparseMatrix & A, const Vector & rf) {
   local_int_t nc = A.mgData->rc->localLength;
 
 	local_int_t rfl = rf.localLength;
+	local_int_t rcl = A.mgData->rc->localLength;
   local_int_t Axfl = A.mgData->Axf->localLength;
 	// XXX TODO check for block sizes non-divisible by n
 	assert(nc % REST_BLOCK == 0);
 
-	compute_restriction_fpga(nc,rcv,rfv,f2c,Axfv,Axfl,rfl);
+	compute_restriction_fpga(nc,rcv,rfv,f2c,Axfv,Axfl,rfl,rcl);
 #pragma omp taskwait noflush
 
   return 0;
@@ -112,10 +113,10 @@ void compute_prolongation_fpga_block(double *xfv, double *xcv, local_int_t *f2c,
 
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-	 copy_in([nc]xcv,[nc]f2c) copy_inout([xfl]xfv)
+	 copy_in([xcl]xcv,[nc]f2c) copy_inout([xfl]xfv)
 #endif
-#pragma omp task inout([xfl]xfv) in([nc]xcv,[nc]f2c)
-void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_int_t *f2c, local_int_t xfl) {
+#pragma omp task inout([xfl]xfv) in([xcl]xcv,[nc]f2c)
+void compute_prolongation_fpga(local_int_t nc, double *xfv, double *xcv, local_int_t *f2c, local_int_t xfl, local_int_t xcl) {
 	local_int_t nblocks = nc / PROL_BLOCK;
 	// XXX TODO check for block sizes non-divisible by n
 	int remainder = nc % PROL_BLOCK;
@@ -136,10 +137,11 @@ int ComputeProlongation_nw(const SparseMatrix & Af, Vector & xf) {
   local_int_t nc = Af.mgData->rc->localLength;
 
   local_int_t xfl = xf.localLength;
+  local_int_t xcl = Af.mgData->xc->localLength;
 	// XXX TODO check for block sizes non-divisible by n
 	assert(nc % PROL_BLOCK == 0);
 
-	compute_prolongation_fpga(nc,xfv,xcv,f2c,xfl);
+	compute_prolongation_fpga(nc,xfv,xcv,f2c,xfl,xcl);
 #pragma omp taskwait noflush
 
   return 0;

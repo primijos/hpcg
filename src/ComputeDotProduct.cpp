@@ -64,10 +64,10 @@ void compute_dot_product_fpga_block(int whoami, double *xv,double *yv, double *r
 
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-	 copy_in([n]xv,[n]yv) copy_inout([1]result)
+	 copy_in([n_x]xv,[n_y]yv) copy_inout([1]result)
 #endif
-#pragma omp task inout([1]result) in([n]xv,[n]yv)
-void compute_dot_product_fpga(const local_int_t n,double *xv,double *yv, double *result) {
+#pragma omp task inout([1]result) in([n_x]xv,[n_y]yv)
+void compute_dot_product_fpga(const local_int_t n, local_int_t n_x, local_int_t n_y, double *xv,double *yv, double *result) {
 	local_int_t nblocks = n / DOTPRODUCT_BLOCK;
 	// XXX TODO check for block sizes non-divisible by n
 	int remainder = n % DOTPRODUCT_BLOCK;
@@ -91,7 +91,7 @@ int ComputeDotProduct_nw(const local_int_t n, const Vector & x, const Vector & y
 	// XXX TODO check for block sizes non-divisible by n
 	assert(n % DOTPRODUCT_BLOCK == 0);
 
-	compute_dot_product_fpga(n,xv,yv,&result);
+	compute_dot_product_fpga(n,x.localLength,y.localLength,xv,yv,&result);
 #pragma omp taskwait noflush
 
 #ifndef HPCG_NO_MPI

@@ -90,6 +90,7 @@ int ComputeSPMV_nw( const SparseMatrix & A, Vector & x, Vector & y) {
   assert(y.localLength>=A.localNumberOfRows);
 
 #ifndef HPCG_NO_MPI
+#pragma omp taskwait on(x)
     ExchangeHalo(A,x);
 #endif
   const double * const xv = x.values;

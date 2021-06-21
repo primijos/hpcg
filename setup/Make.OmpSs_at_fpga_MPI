@@ -108,7 +108,7 @@ HPCG_LIBS     = -L$(MPlibP) -l$(MPlib)
 #    *) Build with OpenMP enabled.
 #    *) Not generate debugging output.
 #
-HPCG_OPTS     = -DHPCG_CONTIGUOUS_ARRAYS
+HPCG_OPTS     = -DHPCG_CONTIGUOUS_ARRAYS -DHPCG_DEBUG
 #HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_CONTIGUOUS_ARRAYS
 #HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_CONTIGUOUS_ARRAYS -DHPCG_DETAILED_DEBUG
 #HPCG_OPTS     = -DHPCG_NO_MPI -DHPCG_NO_OPENMP -DHPCG_DEBUG -DHPCG_DETAILED_DEBUG -DHPCG_CONTIGUOUS_ARRAYS
@@ -124,12 +124,13 @@ HPCG_DEFS     = $(HPCG_OPTS) $(HPCG_INCLUDES)
 #
 #FPGA_HWRUNTIME         ?= som
 FPGA_HWRUNTIME         ?= pom
-FPGA_CLOCK             ?= 250
+FPGA_CLOCK             ?= 100
 #FPGA_CLOCK             ?= 150
-FPGA_MEMORY_PORT_WIDTH ?= 128
+FPGA_MEMORY_PORT_WIDTH ?= 64
 #BOARD									 ?= zedboard
 #BOARD									 ?= alveo_u200
-BOARD									 ?= zcu102
+#BOARD									 ?= zcu102
+BOARD									 ?= alveo_u280
 
 #CROSS_COMPILE ?= arm-linux-gnueabihf-
 CXX          = $(CROSS_COMPILE)fpgacxx
@@ -137,8 +138,8 @@ CXX          = $(CROSS_COMPILE)fpgacxx
 #CXXFLAGS     = $(HPCG_DEFS) $(MODE) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -g -k
 #CXXFLAGS     = $(HPCG_DEFS) $(MODE) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\"
 DEBUGFLAGS     = $(HPCG_DEFS) $(MODE) -O0 --cxx=mpicc -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH) -g -k
-CXXFLAGS     =  $(HPCG_DEFS) $(MODE) --cxx=mpicc -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
-#CXXFLAGS     = $(DEBUGFLAGS)
+#CXXFLAGS     =  $(HPCG_DEFS) $(MODE) --cxx=mpicc -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
+CXXFLAGS     = $(DEBUGFLAGS)
 
 bitstream: CXXFLAGS = $(HPCG_DEFS) -O3 -ffast-math -ftree-vectorize -ftree-vectorizer-verbose=0 --ompss --bitstream-generation -DFPGA_HWRUNTIME=\"$(FPGA_HWRUNTIME)\" -DRUNTIME_MODE=\"perf\" -DFPGA_MEMORY_PORT_WIDTH=$(FPGA_MEMORY_PORT_WIDTH)
 
@@ -167,7 +168,7 @@ HPCG_C_DEPS := $(HPCG_DEPS:.o=.cpp)
 
 hpcg_ait/hpcg.bin: src/main.o $(HPCG_DEPS)
 	$(CXX) -DRUNTIME_MODE=\"perf\" $^ -o bin/xhpcg \
-	--bitstream-generation $(LINKFLAGS)
+	--bitstream-generation $(LINKFLAGS) $(HPCG_LIBS)
 
 .PHONY: bitstream
 

@@ -140,6 +140,7 @@ int ComputeSYMGS_nw( const SparseMatrix & A, const Vector & r, Vector & x) {
   assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
 
 #ifndef HPCG_NO_MPI
+#pragma omp taskwait on(x)
   ExchangeHalo(A,x);
 #endif
 

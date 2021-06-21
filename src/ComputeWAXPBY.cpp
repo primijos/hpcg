@@ -57,10 +57,10 @@ void compute_waxpby_fpga_block(double alpha, double *xv, double beta, double *yv
 
 #ifndef OMPSS_ONLY_SMP
 #pragma omp target device(fpga) num_instances(1) \
-	copy_in([n]xv,[n]yv) copy_inout([n]wv)
+	copy_in([n_x]xv,[n_y]yv) copy_inout([n_w]wv)
 #endif
-#pragma omp task in([n]xv,[n]yv) inout([n]wv)
-void compute_waxpby_fpga(local_int_t n, double alpha, double *xv, double beta, double *yv, double *wv) {
+#pragma omp task in([n_x]xv,[n_y]yv) inout([n_w]wv)
+void compute_waxpby_fpga(local_int_t n, local_int_t n_x, local_int_t n_y, local_int_t n_w, double alpha, double *xv, double beta, double *yv, double *wv) {
 	local_int_t nblocks = n / WAXPBY_BLOCK;
 	// XXX TODO check for block sizes non-divisible by n
 	int remainder = n % WAXPBY_BLOCK;
@@ -86,7 +86,7 @@ int ComputeWAXPBY_nw(const local_int_t n, const double alpha, const Vector & x,
 	// XXX TODO check for block sizes non-divisible by n
 	assert(n % WAXPBY_BLOCK==0);
 
-	compute_waxpby_fpga(n,alpha,xv,beta,yv,wv);
+	compute_waxpby_fpga(n,x.localLength,y.localLength,w.localLength,alpha,xv,beta,yv,wv);
 #pragma omp taskwait noflush
 
   return 0;
